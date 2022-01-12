@@ -14,7 +14,7 @@ fn main() {
         let std_err = std::str::from_utf8(&output.stderr).unwrap();
 
         eprint!("{}", std_err);
-        println!("{}", std_out);
+        print!("{}", std_out);
     } else {
         std::process::exit(1);
     }
