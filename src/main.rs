@@ -3,7 +3,6 @@ use std::ffi::CString;
 use std::fs;
 
 fn main() {
-    // Uncomment this block to pass the first stage!
     let args: Vec<_> = std::env::args().collect();
     let command = &args[3];
     let command_args = &args[4..];
