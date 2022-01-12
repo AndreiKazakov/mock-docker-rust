@@ -15,6 +15,7 @@ fn main() {
 
         eprint!("{}", std_err);
         print!("{}", std_out);
+        std::process::exit(output.status.code().unwrap());
     } else {
         std::process::exit(1);
     }
