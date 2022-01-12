@@ -1,4 +1,7 @@
-// Usage: your_docker.sh run <image> <command> <arg1> <arg2> ...
+use std::env::temp_dir;
+use std::ffi::CString;
+use std::fs;
+
 fn main() {
     // Uncomment this block to pass the first stage!
     let args: Vec<_> = std::env::args().collect();
@@ -8,6 +11,13 @@ fn main() {
         .args(command_args)
         .output()
         .unwrap();
+    let tmp = temp_dir();
+    let cpath = CString::new(tmp.to_str().unwrap()).unwrap();
+    fs::copy(command, tmp.join(command)).unwrap();
+
+    unsafe {
+        libc::chroot(cpath.as_ptr());
+    }
 
     let std_out = std::str::from_utf8(&output.stdout).unwrap();
     let std_err = std::str::from_utf8(&output.stderr).unwrap();
