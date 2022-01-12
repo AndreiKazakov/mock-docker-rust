@@ -11,7 +11,7 @@ fn main() {
     let cpath = CString::new(tmp.to_str().unwrap()).unwrap();
     fs::create_dir(&tmp).unwrap();
     fs::copy(command, tmp.join(command)).unwrap();
-    fs::read_dir(env::temp_dir())
+    fs::read_dir(&tmp)
         .unwrap()
         .for_each(|e| println!("{:?}", e.unwrap()));
 
