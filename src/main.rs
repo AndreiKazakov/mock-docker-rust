@@ -1,7 +1,5 @@
 // Usage: your_docker.sh run <image> <command> <arg1> <arg2> ...
 fn main() {
-    println!("Your code goes here!");
-
     // Uncomment this block to pass the first stage!
     let args: Vec<_> = std::env::args().collect();
     let command = &args[3];
@@ -13,7 +11,10 @@ fn main() {
 
     if output.status.success() {
         let std_out = std::str::from_utf8(&output.stdout).unwrap();
-        println!("{}", std_out)
+        let std_err = std::str::from_utf8(&output.stderr).unwrap();
+
+        eprint!("{}", std_err);
+        println!("{}", std_out);
     } else {
         std::process::exit(1);
     }
