@@ -7,7 +7,7 @@ fn main() {
     let command = &args[3];
     let command_args = &args[4..];
     let mut tmp = env::temp_dir();
-    tmp.push("docker-rust");
+    tmp.push("docker-rust-root");
     let cpath = CString::new(tmp.to_str().unwrap()).unwrap();
     fs::create_dir(&tmp).unwrap();
     fs::copy(command, tmp.join(command)).unwrap();
