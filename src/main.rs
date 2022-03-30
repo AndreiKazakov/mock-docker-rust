@@ -11,9 +11,6 @@ fn main() {
     let cpath = CString::new(tmp.to_str().unwrap()).unwrap();
     fs::create_dir(&tmp).unwrap();
     fs::copy(command, tmp.join(command)).unwrap();
-    fs::read_dir(&tmp)
-        .unwrap()
-        .for_each(|e| println!("{:?}", e.unwrap()));
 
     unsafe {
         libc::chroot(cpath.as_ptr());
@@ -22,6 +19,7 @@ fn main() {
 
     let output = std::process::Command::new(command)
         .args(command_args)
+        .stdin(std::process::Stdio::null())
         .output()
         .unwrap();
     let std_out = std::str::from_utf8(&output.stdout).unwrap();
