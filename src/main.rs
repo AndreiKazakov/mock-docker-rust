@@ -18,7 +18,7 @@ fn main() {
 
     let output = std::process::Command::new(command)
         .args(command_args)
-        .stdin(std::process::Stdio::null())
+        .stdin(std::process::Stdio::piped())
         .output()
         .unwrap();
     let std_out = std::str::from_utf8(&output.stdout).unwrap();
