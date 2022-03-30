@@ -15,7 +15,6 @@ fn main() {
     unsafe {
         libc::chroot(cpath.as_ptr());
     }
-    env::set_current_dir(&tmp).unwrap();
 
     let output = std::process::Command::new(command)
         .args(command_args)
