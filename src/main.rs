@@ -6,7 +6,6 @@ use std::fs;
 fn main() {
     let args: Vec<_> = std::env::args().collect();
     let command = &args[3];
-    let command_args = &args[4..];
     let tmp = env::temp_dir().join("docker-rust-root");
     let cpath = CString::new(tmp.as_os_str().to_str().unwrap()).unwrap();
 
