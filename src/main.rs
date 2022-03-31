@@ -6,16 +6,16 @@ fn main() {
     let args: Vec<_> = std::env::args().collect();
     let command = &args[3];
     let command_args = &args[4..];
-    let mut tmp = env::temp_dir();
-    tmp.push("docker-rust-root");
+    let tmp = env::temp_dir().join("docker-rust-root");
     let cpath = CString::new(tmp.to_str().unwrap()).unwrap();
-    fs::create_dir(&tmp).unwrap();
-    fs::create_dir(format!("{}/dev", tmp.to_str().unwrap())).unwrap();
-    fs::File::create(format!("{}/dev/null", tmp.to_str().unwrap())).unwrap();
+
+    fs::create_dir_all(tmp.join("dev")).unwrap();
+    fs::File::create(tmp.join("dev").join("null")).unwrap();
     fs::copy(command, tmp.join(command)).unwrap();
 
     unsafe {
         libc::chroot(cpath.as_ptr());
+        libc::chdir(cpath.as_ptr());
     }
 
     let output = std::process::Command::new(command)
