@@ -29,8 +29,8 @@ fn main() {
         libc::chdir(root.as_ptr());
     }
 
-    let args: &[&str] = &[];
-    let output = std::process::Command::new("ls")
+    let args: &[&str] = &["adsf"];
+    let output = std::process::Command::new("echo")
         .args(args)
         .output()
         .unwrap();
