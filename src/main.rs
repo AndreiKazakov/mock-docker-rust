@@ -29,8 +29,9 @@ fn main() {
         libc::chdir(root.as_ptr());
     }
 
+    let args: &[&str] = &[];
     let output = std::process::Command::new("ls")
-        .args(&["/"])
+        .args(args)
         .output()
         .unwrap();
     let std_out = std::str::from_utf8(&output.stdout).unwrap();
