@@ -11,7 +11,11 @@ fn main() {
 
     fs::create_dir_all(tmp.join("dev")).unwrap();
     fs::File::create(tmp.join("dev").join("null")).unwrap();
-    fs::copy(command, tmp.join(command)).unwrap();
+
+    let command_path = std::path::Path::new(command);
+
+    fs::create_dir_all(tmp.join(command_path).parent().unwrap()).unwrap();
+    fs::copy(command, tmp.join(command_path)).unwrap();
 
     unsafe {
         libc::chroot(cpath.as_ptr());
