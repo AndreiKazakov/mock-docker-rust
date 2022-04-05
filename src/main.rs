@@ -25,8 +25,10 @@ fn main() {
 
     unsafe {
         libc::chroot(cpath.as_ptr());
-        env::set_current_dir("/").unwrap();
+        libc::unshare(libc::CLONE_NEWPID);
     }
+    
+    env::set_current_dir("/").unwrap();
 
     let output = std::process::Command::new(command)
         .args(command_args)
