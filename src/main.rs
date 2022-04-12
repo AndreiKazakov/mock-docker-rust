@@ -12,7 +12,9 @@ use serde_json::Value;
 
 fn main() -> Result<(), String> {
     let args: Vec<_> = std::env::args().collect();
-    let image: Vec<&str> = args[2].split(':').collect();
+    let image_reference: Vec<&str> = args[2].split(':').collect();
+    let image = image_reference[0];
+    let tag = if image_reference.len() > 1 { image_reference[1] } else { "latest" };
     let command = &args[3];
     let command_args = &args[4..];
     let tmp = env::temp_dir().join("docker-rust-root");
@@ -21,7 +23,7 @@ fn main() -> Result<(), String> {
     fs::create_dir_all(tmp.join("dev")).unwrap();
     fs::File::create(tmp.join("dev").join("null")).unwrap();
 
-    let blobs = get_image_blobs(image[0], image[1])?;
+    let blobs = get_image_blobs(image, tag)?;
 
     for bytes in blobs {
         untar(&bytes, tmp.to_str().unwrap());
