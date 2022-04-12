@@ -2,6 +2,7 @@ use std::env;
 use std::ffi::CString;
 use std::fs;
 use std::io::{BufWriter, Write};
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 use bytes::Bytes;
@@ -25,6 +26,17 @@ fn main() -> Result<(), String> {
     for bytes in blobs {
         untar(&bytes, tmp.to_str().unwrap());
     }
+
+
+    let command_path = Path::new(command);
+    let command_target = if command_path.has_root() {
+        command_path.components().skip(1).collect::<PathBuf>()
+    } else {
+        command_path.to_path_buf()
+    };
+
+    fs::create_dir_all(tmp.join(&command_target).parent().unwrap()).unwrap();
+    fs::copy(command, tmp.join(&command_target)).unwrap();
 
     unsafe {
         libc::chroot(cpath.as_ptr());
