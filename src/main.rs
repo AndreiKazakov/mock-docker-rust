@@ -20,15 +20,14 @@ fn main() -> Result<(), String> {
     let tmp = env::temp_dir().join("docker-rust-root");
     let cpath = CString::new(tmp.as_os_str().to_str().unwrap()).unwrap();
 
-    fs::create_dir_all(tmp.join("dev")).unwrap();
-    fs::File::create(tmp.join("dev").join("null")).unwrap();
-
     let blobs = get_image_blobs(image, tag)?;
 
     for bytes in blobs {
         untar(&bytes, tmp.to_str().unwrap());
     }
 
+    fs::create_dir_all(tmp.join("dev")).unwrap();
+    fs::File::create(tmp.join("dev").join("null")).unwrap();
 
     let command_path = Path::new(command);
     let command_target = if command_path.has_root() {
