@@ -37,7 +37,7 @@ fn main() -> Result<(), String> {
     };
 
     fs::create_dir_all(tmp.join(&command_target).parent().unwrap()).unwrap();
-    fs::copy(command, tmp.join(&command_target)).unwrap();
+    // fs::copy(command, tmp.join(&command_target)).unwrap();
 
     unsafe {
         libc::chroot(cpath.as_ptr());
