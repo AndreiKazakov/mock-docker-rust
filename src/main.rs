@@ -1,46 +1,44 @@
 use std::env;
 use std::ffi::CString;
 use std::fs;
-use std::io::{BufWriter, Write};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 use bytes::Bytes;
 use reqwest::blocking::Client;
-use reqwest::header::{AUTHORIZATION, HeaderMap, HeaderValue, WWW_AUTHENTICATE};
+use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, WWW_AUTHENTICATE};
 use serde_json::Value;
 
 fn main() -> Result<(), String> {
     let args: Vec<_> = std::env::args().collect();
     let image_reference: Vec<&str> = args[2].split(':').collect();
     let image = image_reference[0];
-    let tag = if image_reference.len() > 1 { image_reference[1] } else { "latest" };
-    let command = &args[3];
+    let tag = if image_reference.len() > 1 {
+        image_reference[1]
+    } else {
+        "latest"
+    };
+    let command = Path::new(&args[3]);
     let command_args = &args[4..];
-    let tmp = env::temp_dir().join("docker-rust-root");
-    let cpath = CString::new(tmp.as_os_str().to_str().unwrap()).unwrap();
+    let tmp = PathBuf::from("/app/sandbox");
+    let cpath = CString::new("/app/sandbox").unwrap();
 
     fs::create_dir_all(tmp.join("dev")).unwrap();
-    fs::File::create(tmp.join("dev").join("null")).unwrap();
+    let dev_null = tmp.join("dev").join("null");
+    Command::new("mknod")
+        .args(&["-m", "666", dev_null.to_str().unwrap(), "c", "1", "3"])
+        .status()
+        .unwrap();
 
     let blobs = get_image_blobs(image, tag)?;
 
     for bytes in blobs {
-        untar(&bytes, tmp.to_str().unwrap());
+        untar(&bytes, tmp.to_str().unwrap())?;
     }
 
-    let command_path = Path::new(command);
-    let command_target = if command_path.has_root() {
-        command_path.components().skip(1).collect::<PathBuf>()
-    } else {
-        command_path.to_path_buf()
-    };
-
-    fs::create_dir_all(tmp.join(&command_target).parent().unwrap()).unwrap();
-    // fs::copy(command, tmp.join(&command_target)).unwrap();
-
     unsafe {
-        libc::chroot(cpath.as_ptr());
+        libc::chroot(cpath.into_raw() as *const libc::c_char);
         libc::unshare(libc::CLONE_NEWPID);
     }
 
@@ -58,7 +56,8 @@ fn main() -> Result<(), String> {
 fn get_image_blobs(name: &str, reference: &str) -> Result<Vec<Bytes>, String> {
     let headers = docker_auth_headers(name)?;
     let client = Client::new();
-    let manifest_url = format!("https://registry.hub.docker.com/v2/library/{}/manifests/{}", name, reference);
+    let docker_hub = "https://registry.hub.docker.com";
+    let manifest_url = format!("{}/v2/library/{}/manifests/{}", docker_hub, name, reference);
     let manifest: Value = client
         .get(&manifest_url)
         .headers(headers.clone())
@@ -75,8 +74,12 @@ fn get_image_blobs(name: &str, reference: &str) -> Result<Vec<Bytes>, String> {
     let mut res = Vec::with_capacity(layers.len());
 
     for layer in layers {
-        let layer_url = format!("https://registry.hub.docker.com/v2/library/{}/blobs/{}", name, layer);
-        let layer_res = client.get(&layer_url).headers(headers.clone()).send().unwrap();
+        let layer_url = format!("{}/v2/library/{}/blobs/{}", docker_hub, name, layer);
+        let layer_res = client
+            .get(&layer_url)
+            .headers(headers.clone())
+            .send()
+            .unwrap();
 
         let bytes = layer_res.bytes().unwrap();
         res.push(bytes);
@@ -90,24 +93,35 @@ fn docker_auth_headers(image: &str) -> Result<HeaderMap, String> {
     let service = "registry.docker.io";
     let scope = format!("repository:library/{}:pull", image);
     let token_url = format!("{}?service=registry.docker.io&scope={}", realm, scope);
-    let token_res: Value = Client::new().get(&token_url).send().unwrap().json().unwrap();
+    let token_res: Value = Client::new()
+        .get(&token_url)
+        .send()
+        .unwrap()
+        .json()
+        .unwrap();
     let token = token_res["token"].as_str().ok_or("No token in response")?;
-    let www_authenticate = format!("Bearer realm=\"{}\",service=\"{}\",scope=\"{}\"", realm, service, scope);
-    let authorization = format!("Bearer {}", token);
+    let www_auth = format!(
+        "Bearer realm=\"{}\",service=\"{}\",scope=\"{}\"",
+        realm, service, scope
+    );
+    let auth = format!("Bearer {}", token);
 
     let mut headers = HeaderMap::new();
-    headers.insert(WWW_AUTHENTICATE, HeaderValue::from_str(&www_authenticate).unwrap());
-    headers.insert(AUTHORIZATION, HeaderValue::from_str(&authorization).unwrap());
+    headers.insert(WWW_AUTHENTICATE, HeaderValue::from_str(&www_auth).unwrap());
+    headers.insert(AUTHORIZATION, HeaderValue::from_str(&auth).unwrap());
     Ok(headers)
 }
 
-fn untar(bytes: &[u8], directory: &str) {
-    let tar = Command::new("tar")
+fn untar(bytes: &[u8], directory: &str) -> Result<(), String> {
+    let mut tar = Command::new("tar")
         .args(&["xfz", "-", "--directory", directory])
         .stdin(Stdio::piped())
         .spawn()
         .unwrap();
-    let mut tar_input = tar.stdin.unwrap();
-    let mut writer = BufWriter::new(&mut tar_input);
-    writer.write_all(bytes).unwrap();
+    tar.stdin.take().unwrap().write_all(bytes).unwrap();
+    match tar.wait() {
+        Err(err) => Err(err.to_string()),
+        Ok(status) if status.success() => Ok(()),
+        Ok(status) => Err(status.to_string()),
+    }
 }
